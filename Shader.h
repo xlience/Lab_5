@@ -1,7 +1,10 @@
-#ifndef SHADER_H // Проверяем, был ли ранее определён этот заголовок
+#ifndef SHADER_H // РџСЂРѕРІРµСЂСЏРµРј, Р±С‹Р» Р»Рё СЂР°РЅРµРµ РѕРїСЂРµРґРµР»С‘РЅ СЌС‚РѕС‚ Р·Р°РіРѕР»РѕРІРѕРє
 #define SHADER_H
 
 #include <GL/glew.h>
+#include "glm.hpp"
+#include "matrix_transform.hpp"
+#include "type_ptr.hpp"
 #include <string>
 #include <fstream>
 #include <sstream>
@@ -60,6 +63,10 @@ public:
 
     void setMat4(const std::string& name, const float* value) {
         glUniformMatrix4fv(glGetUniformLocation(ID, name.c_str()), 1, GL_FALSE, value);
+    }
+
+    void setMat3(const std::string& name, const glm::mat3& value) {
+        glUniformMatrix3fv(glGetUniformLocation(ID, name.c_str()), 1, GL_FALSE, &value[0][0]);
     }
 
 private:
