@@ -1,4 +1,4 @@
-﻿#include "shader.h"
+#include "Shader.h"
 #define GLEW_DLL
 #define GLFW_DLL
 
@@ -31,68 +31,35 @@ glm::mat4 projection = glm::perspective(
     100.0f);
 
 glm::mat4 view = glm::lookAt(CameraPos, CameraPos + CameraFront, CameraUp);
+glm::mat4 modelMatrix = glm::mat4(1.0f);
 
-void mouse_callback(GLFWwindow* window, double xposIn, double yposIn);
+// Прототипы функций
+void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 void processInput(GLFWwindow* window);
 
-int main()
+void settingVec3(Shader& shader, const char* name, const glm::vec3& value) {
+    glUniform3fv(glGetUniformLocation(shader.ID, name), 1, &value[0]);
+}
+
+void settingFloat(Shader& shader, const char* name, float value) {
+    glUniform1f(glGetUniformLocation(shader.ID, name), value);
+}
+
+void processInput(GLFWwindow* window)
 {
-    glfwInit();
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
+    if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+        glfwSetWindowShouldClose(window, true);
 
-    GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "3D Model Renderer", NULL, NULL);
-    if (!window) {
-        std::cerr << "Failed to create GLFW window" << std::endl;
-        glfwTerminate();
-        return -1;
-    }
+    float cameraSpeed = 2.5f * 0.016f;
 
-    glfwMakeContextCurrent(window);
-    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-    glfwSetCursorPosCallback(window, mouse_callback);
-
-    glewExperimental = GL_TRUE;
-    if (glewInit() != GLEW_OK) {
-        std::cerr << "Failed to initialize GLEW" << std::endl;
-        return -1;
-    }
-
-    GLuint VAO, VBO, EBO;
-    glGenVertexArrays(1, &VAO);
-    glGenBuffers(1, &VBO);
-    glGenBuffers(1, &EBO);
-
-    glBindVertexArray(VAO);
-
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), (GLvoid*)0);
-    glEnableVertexAttribArray(0);
-
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    glBindVertexArray(0);
-
-    Shader shader("vertex_sheder.glsl", "fragment_shader.glsl");
-
-    Model model("xlience.obj");
-
-    while (!glfwWindowShouldClose(window)) {
-        processInput(window);
-
-        view = glm::lookAt(CameraPos, CameraPos + CameraFront, CameraUp);
-
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-        shader.use();
-        shader.setMat4("view", glm::value_ptr(view));
-        shader.setMat4("projection", glm::value_ptr(projection));
-        model.Draw(shader);
-
-        glfwSwapBuffers(window);
-        glfwPollEvents();
-    }
-
-    glfwTerminate();
-    return 0;
+    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+        CameraPos += cameraSpeed * CameraFront;
+    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+        CameraPos -= cameraSpeed * CameraFront;
+    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+        CameraPos -= glm::normalize(glm::cross(CameraFront, CameraUp)) * cameraSpeed;
+    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+        CameraPos += glm::normalize(glm::cross(CameraFront, CameraUp)) * cameraSpeed;
 }
 
 void mouse_callback(GLFWwindow* window, double xposIn, double yposIn)
@@ -100,7 +67,7 @@ void mouse_callback(GLFWwindow* window, double xposIn, double yposIn)
     float xpos = static_cast<float>(xposIn);
     float ypos = static_cast<float>(yposIn);
 
-    if (firstMouse) // initially set to true 
+    if (firstMouse)
     {
         lastX = xpos;
         lastY = ypos;
@@ -127,22 +94,96 @@ void mouse_callback(GLFWwindow* window, double xposIn, double yposIn)
     front.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
     front.y = sin(glm::radians(pitch));
     front.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
-    CameraFront = glm::normalize(front); // изменяем вектор направления камеры
+    CameraFront = glm::normalize(front);
 }
 
-void processInput(GLFWwindow* window)
+int main()
 {
-    if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
-        glfwSetWindowShouldClose(window, true);
+    if (!glfwInit()) {
+        std::cerr << "Failed to initialize GLFW" << std::endl;
+        return -1;
+    }
 
-    float cameraSpeed = 2.5f * 0.016f;
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-        CameraPos += cameraSpeed * CameraFront;
-    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-        CameraPos -= cameraSpeed * CameraFront;
-    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-        CameraPos -= glm::normalize(glm::cross(CameraFront, CameraUp)) * cameraSpeed;
-    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-        CameraPos += glm::normalize(glm::cross(CameraFront, CameraUp)) * cameraSpeed;
+    GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "3D Model Renderer", NULL, NULL);
+    if (!window) {
+        std::cerr << "Failed to create GLFW window" << std::endl;
+        glfwTerminate();
+        return -1;
+    }
+
+    glfwMakeContextCurrent(window);
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    glfwSetCursorPosCallback(window, mouse_callback);
+
+    glewExperimental = GL_TRUE;
+    if (glewInit() != GLEW_OK) {
+        std::cerr << "Failed to initialize GLEW" << std::endl;
+        glfwTerminate();
+        return -1;
+    }
+
+    glEnable(GL_DEPTH_TEST);
+
+    Shader shader("vertex_sheder.glsl", "fragment_shader.glsl");
+    Model model("xlience.obj");
+
+    // Настройка параметров света (вынесено из цикла рендеринга, так как они постоянны)
+    glm::vec3 lightColor = glm::vec3(1.0f, 1.0f, 1.0f);
+    glm::vec3 lightAmbient = lightColor * glm::vec3(0.1f);
+    glm::vec3 lightDiffuse = lightColor * glm::vec3(0.8f);
+    glm::vec3 lightSpecular = lightColor;
+    glm::vec3 lightPosition = glm::vec3(2.0f, 2.0f, 2.0f); // Изменена позиция для лучшего освещения
+
+    // Настройка материала (вынесено из цикла рендеринга)
+    glm::vec3 matAmbient = glm::vec3(1.0f, 0.5f, 0.31f);
+    glm::vec3 matDiffuse = glm::vec3(1.0f, 0.5f, 0.31f);
+    glm::vec3 matSpecular = glm::vec3(0.5f, 0.5f, 0.5f);
+    float matShininess = 32.0f;
+
+    while (!glfwWindowShouldClose(window)) {
+        processInput(window);
+
+        glClearColor(0.1f, 0.1f, 0.1f, 1.0f); // Изменен цвет фона для лучшего отображения освещения
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        view = glm::lookAt(CameraPos, CameraPos + CameraFront, CameraUp);
+
+        shader.use();
+
+        // Передаем матрицы
+        shader.setMat4("view", glm::value_ptr(view));
+        shader.setMat4("projection", glm::value_ptr(projection));
+        shader.setMat4("model", glm::value_ptr(modelMatrix));
+
+        // Передаем параметры света
+        settingVec3(shader, "Light_1.ambient", lightAmbient);
+        settingVec3(shader, "Light_1.diffuse", lightDiffuse);
+        settingVec3(shader, "Light_1.specular", lightSpecular);
+        settingVec3(shader, "Light_1.position", lightPosition);
+
+        // Передаем параметры материала
+        settingVec3(shader, "Mat_1.ambient", matAmbient);
+        settingVec3(shader, "Mat_1.diffuse", matDiffuse);
+        settingVec3(shader, "Mat_1.specular", matSpecular);
+        settingFloat(shader, "Mat_1.shininess", matShininess);
+
+        // Передаем позицию камеры
+        settingVec3(shader, "viewPos", CameraPos);
+
+        // Вычисляем и передаем нормальную матрицу
+        glm::mat3 normalMatrix = glm::transpose(glm::inverse(glm::mat3(modelMatrix)));
+        shader.setMat3("normalMatrix", normalMatrix);
+
+        model.Draw(shader);
+
+        glfwSwapBuffers(window);
+        glfwPollEvents();
+    }
+
+    glfwTerminate();
+    return 0;
 }
